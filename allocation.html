@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Disk Allocation Simulator | OS PBL</title>
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/allocation.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Persistent Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-icon">OS</div>
+        <div class="brand-text">
+          <h2>OS Simulator</h2>
+          <span>PBL Sem 5</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="nav-label">Core Modules</div>
+        <a href="index.html" class="nav-item">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
+          <span>File Operations</span>
+        </a>
+        <a href="allocation.html" class="nav-item active">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2 1.5 3 3.5 3h9c2 0 3.5-1 3.5-3V7c0-2-1.5-3-3.5-3h-9C5.5 4 4 5 4 7z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6"></path></svg>
+          <span>Disk Allocation</span>
+        </a>
+        <a href="disk-scheduling.html" class="nav-item">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+          <span>Disk Scheduling</span>
+        </a>
+
+        <div class="nav-label" style="margin-top: 14px;">Reports & Data</div>
+        <a href="/api/report/download" target="_blank" class="nav-item">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+          <span>Download Report</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="system-status">
+          <div class="status-dot"></div>
+          <span>Allocator Active</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <header class="topbar">
+        <div class="page-title">
+          <h1>
+            Disk Space Allocation Methods
+            <span class="edu-tooltip">ℹ️
+              <span class="tooltip-text">Visualizes how an operating system assigns physical disk blocks to files using Contiguous, Linked, or Indexed schemes.</span>
+            </span>
+          </h1>
+          <p>Analyze block fragmentation, test placement policies, and compare allocation strategies on a simulated 64-block disk.</p>
+        </div>
+
+        <div class="topbar-actions">
+          <button id="btnExportAlloc" class="btn btn-secondary btn-sm" title="Export current disk block map">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+            Export Map
+          </button>
+          <label class="btn btn-secondary btn-sm" style="cursor: pointer;" title="Import previously exported map">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+            Import Map
+            <input type="file" id="importAllocInput" accept=".json" style="display: none;">
+          </label>
+          <button id="btnResetDisk" class="btn btn-danger btn-sm">Clear Disk</button>
+        </div>
+      </header>
+
+      <div class="page-body">
+        <!-- Strategy Switcher & Controls Header -->
+        <div class="strategy-header">
+          <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+            <div class="strategy-tabs">
+              <button class="strategy-btn active" data-strategy="contiguous">Contiguous</button>
+              <button class="strategy-btn" data-strategy="linked">Linked</button>
+              <button class="strategy-btn" data-strategy="indexed">Indexed</button>
+            </div>
+
+            <!-- Placement policy (for contiguous) -->
+            <div id="policySelectorContainer" style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 12px; color: var(--text-muted); font-weight: 600;">Placement Policy:</span>
+              <select id="placementPolicySelect" class="select" style="padding: 6px 10px; font-size: 12px;">
+                <option value="first-fit">First-Fit (fastest search)</option>
+                <option value="best-fit">Best-Fit (tightest hole)</option>
+                <option value="worst-fit">Worst-Fit (largest remaining hole)</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <button id="btnCompactDisk" class="btn btn-success btn-sm" title="Compaction packs all allocated blocks together to coalesce free blocks">
+              <span>🧹 Compact Disk (Defrag)</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Real-time Statistics Cards -->
+        <div class="stats-grid">
+          <div class="stat-card blue">
+            <div class="stat-title">
+              <span>Total Capacity</span>
+              <span class="edu-tooltip">ℹ️<span class="tooltip-text">64 blocks × 512 bytes = 32 KB simulated disk space.</span></span>
+            </div>
+            <div id="statTotalCapacity" class="stat-value">32.0 KB</div>
+            <div class="stat-sub">64 Blocks @ 512 Bytes/block</div>
+          </div>
+
+          <div class="stat-card green">
+            <div class="stat-title">
+              <span>Used Disk Blocks</span>
+            </div>
+            <div id="statUsedBlocks" class="stat-value">0 / 64</div>
+            <div id="statFreeBlocks" class="stat-sub">64 free blocks</div>
+          </div>
+
+          <div class="stat-card orange">
+            <div class="stat-title">
+              <span>Internal Fragmentation</span>
+              <span class="edu-tooltip">ℹ️<span class="tooltip-text">Wasted space inside allocated blocks when the file size is not an exact multiple of the 512-byte block size.</span></span>
+            </div>
+            <div id="statInternalFrag" class="stat-value">0 B</div>
+            <div class="stat-sub">Wasted inside tail blocks</div>
+          </div>
+
+          <div class="stat-card purple">
+            <div class="stat-title">
+              <span>External Fragmentation</span>
+              <span class="edu-tooltip">ℹ️<span class="tooltip-text">Occurs in Contiguous Allocation when total free blocks exist, but are fragmented into small non-contiguous holes.</span></span>
+            </div>
+            <div id="statExternalFrag" class="stat-value">0 blocks</div>
+            <div class="stat-sub">Non-contiguous free holes</div>
+          </div>
+
+          <div class="stat-card blue">
+            <div class="stat-title">
+              <span>Storage Efficiency</span>
+            </div>
+            <div id="statEfficiency" class="stat-value">100%</div>
+            <div class="stat-sub">Payload vs Allocated ratio</div>
+          </div>
+        </div>
+
+        <!-- Main Allocation Layout -->
+        <div class="allocation-layout">
+          <!-- Left: 64-Block Visual Map -->
+          <div class="disk-map-card">
+            <div class="card-header">
+              <div class="card-title">
+                Simulated Disk Platter Map (64 Blocks)
+                <span class="edu-tooltip">ℹ️<span class="tooltip-text">Click any block to inspect its allocated payload, next-block link pointer, or index pointer table.</span></span>
+              </div>
+            </div>
+
+            <div class="disk-legend">
+              <div class="legend-item">
+                <div class="legend-box legend-free"></div>
+                <span>Free Block</span>
+              </div>
+              <div class="legend-item">
+                <div class="legend-box legend-allocated"></div>
+                <span>Allocated Data Block</span>
+              </div>
+              <div class="legend-item">
+                <div class="legend-box legend-index"></div>
+                <span>Index Block (Indexed Mode)</span>
+              </div>
+              <div class="legend-item">
+                <div class="legend-box" style="background: #ef4444;"></div>
+                <span>Internal Frag (red bar)</span>
+              </div>
+            </div>
+
+            <!-- Block Grid -->
+            <div id="blockGrid" class="block-grid">
+              <!-- Rendered via allocation.js -->
+            </div>
+          </div>
+
+          <!-- Right: Controls & File Management -->
+          <div style="display: flex; flex-direction: column; gap: 20px;">
+            <!-- Allocate File Form -->
+            <div class="alloc-form-card">
+              <div class="card-header">
+                <div class="card-title">+ Allocate New File</div>
+              </div>
+              <form id="formAllocateFile">
+                <div class="input-group">
+                  <label class="input-label">File Name</label>
+                  <input type="text" id="allocFileName" class="input" placeholder="e.g. video.mp4" required>
+                </div>
+                <div class="input-group">
+                  <label class="input-label">File Size (Bytes)</label>
+                  <input type="number" id="allocFileSize" class="input" placeholder="e.g. 1500 (3 blocks @ 512B)" min="1" max="30000" required>
+                  <span style="font-size: 11px; color: var(--text-subtle);">Note: Block size is 512 bytes. 1500 B will require 3 data blocks.</span>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 6px;">Allocate on Disk</button>
+              </form>
+            </div>
+
+            <!-- Currently Allocated Files -->
+            <div class="file-list-card">
+              <div class="card-header">
+                <div class="card-title">
+                  Files On Disk (<span id="allocatedFilesCount">0</span>)
+                </div>
+              </div>
+              <div id="allocatedFilesList" style="max-height: 240px; overflow-y: auto;">
+                <!-- Populated via allocation.js -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Educational Comparison Cards -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-top: 10px;">
+          <div class="card">
+            <h3 style="color: var(--primary); font-size: 14px; margin-bottom: 8px;">1. Contiguous Allocation</h3>
+            <p style="font-size: 12px; color: var(--text-muted); line-height: 1.5;">
+              Files occupy consecutive blocks. Provides fastest sequential and direct read access.
+              <strong>Drawbacks:</strong> External fragmentation develops as files are deleted; requires disk compaction. File cannot grow without pre-allocation.
+            </p>
+          </div>
+          <div class="card">
+            <h3 style="color: var(--success); font-size: 14px; margin-bottom: 8px;">2. Linked Allocation</h3>
+            <p style="font-size: 12px; color: var(--text-muted); line-height: 1.5;">
+              File is a linked list of disk blocks scattered anywhere on disk. Each block stores a pointer to the next block.
+              <strong>Drawbacks:</strong> Slow direct (random) access because pointers must be read sequentially; pointer overhead eats a few bytes per block.
+            </p>
+          </div>
+          <div class="card">
+            <h3 style="color: var(--purple); font-size: 14px; margin-bottom: 8px;">3. Indexed Allocation</h3>
+            <p style="font-size: 12px; color: var(--text-muted); line-height: 1.5;">
+              Brings all pointers together into a dedicated <strong>Index Block</strong>. Supports fast direct access without external fragmentation.
+              <strong>Drawbacks:</strong> Pointer overhead of dedicating an entire index block even for tiny 1-block files.
+            </p>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Modal: Inspect Block -->
+  <div id="modalInspectBlock" class="modal-overlay">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3>Disk Block Inspection</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="meta-grid">
+          <div class="meta-item">
+            <div class="meta-label">Block Number</div>
+            <div id="inspectBlockId" class="meta-val">#0</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-label">Allocation Status</div>
+            <div id="inspectBlockStatus" class="meta-val">FREE</div>
+          </div>
+          <div class="meta-item" style="grid-column: span 2;">
+            <div class="meta-label">Associated File</div>
+            <div id="inspectBlockFile" class="meta-val">None</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-label">Payload Data</div>
+            <div id="inspectBlockDataBytes" class="meta-val">0 B</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-label">Internal Frag</div>
+            <div id="inspectBlockFrag" class="meta-val">0 B</div>
+          </div>
+        </div>
+        <div id="inspectBlockPointersSection" class="meta-item" style="display:none; margin-top: 10px;">
+          <div class="meta-label">Linkage / Table Pointers</div>
+          <div id="inspectBlockPointers" class="meta-val">-</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-modal-cancel">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <div id="toast-container"></div>
+  <script src="js/notifications.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/allocation.js"></script>
+</body>
+</html>
