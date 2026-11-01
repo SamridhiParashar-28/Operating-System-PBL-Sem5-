@@ -155,3 +155,11 @@ Operating-System-PBL-Sem5-/
 - **Created GitHub Actions Workflow (`.github/workflows/deploy-pages.yml`):** Automated deployment workflow targeting GitHub Pages using `actions/deploy-pages@v4` pointing to the `./public` artifact directory.
 - **Dual-Mode Client Engine (`public/js/api.js`):** Engineered a transparent fallback layer containing client-side simulation engines (`ClientFS`, `ClientAllocator`, `ClientScheduler`). When deployed statically to GitHub Pages, the simulator executes 100% in-browser without requiring an active cloud backend.
 
+---
+
+## 6. Session 6: Root Placement for Branch-Based GitHub Pages Deployment
+- **Root Placement for GitHub Pages:** Placed `index.html`, `allocation.html`, `disk-scheduling.html`, `css/`, and `js/` directly at repository root `/` so that selecting **Deploy from a branch -> main / (root)** in GitHub Settings immediately serves `index.html` instead of `README.md`.
+- **Created `.nojekyll`:** Added `.nojekyll` to root to disable GitHub Jekyll markdown transformation and directory filtering.
+- **Updated `server.js`:** Configured Express to serve both root and `public/` directory so local Node.js execution via `start.bat` remains 100% compatible.
+
+

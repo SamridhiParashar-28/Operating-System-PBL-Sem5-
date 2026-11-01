@@ -27,7 +27,8 @@ const diskScheduler = new DiskScheduler(199);      // 200 cylinders: 0 to 199
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Static frontend assets
+// Static frontend assets (supports both root placement for GitHub Pages and public/ folder)
+app.use(express.static(__dirname));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Mount API Routers
@@ -47,20 +48,21 @@ app.get('/api/health', (req, res) => {
 
 // Pretty page routes
 app.get('/file-ops', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 app.get('/allocation', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'allocation.html'));
+  res.sendFile(path.join(__dirname, 'allocation.html'));
 });
 
 app.get('/disk', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'disk-scheduling.html'));
+  res.sendFile(path.join(__dirname, 'disk-scheduling.html'));
 });
 
 app.get('/disk-scheduling', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'disk-scheduling.html'));
+  res.sendFile(path.join(__dirname, 'disk-scheduling.html'));
 });
+
 
 // Start Server
 app.listen(PORT, () => {

@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Disk Scheduling Simulator & Comparison | OS PBL</title>
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/disk.css">
+  <!-- Chart.js via CDN with resilient fallback handling -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="app-container">
+    <!-- Persistent Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-icon">OS</div>
+        <div class="brand-text">
+          <h2>OS Simulator</h2>
+          <span>PBL Sem 5</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="nav-label">Core Modules</div>
+        <a href="index.html" class="nav-item">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
+          <span>File Operations</span>
+        </a>
+        <a href="allocation.html" class="nav-item">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2 1.5 3 3.5 3h9c2 0 3.5-1 3.5-3V7c0-2-1.5-3-3.5-3h-9C5.5 4 4 5 4 7z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6"></path></svg>
+          <span>Disk Allocation</span>
+        </a>
+        <a href="disk-scheduling.html" class="nav-item active">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+          <span>Disk Scheduling</span>
+        </a>
+
+        <div class="nav-label" style="margin-top: 14px;">Reports & Data</div>
+        <a href="/api/report/download" target="_blank" class="nav-item">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+          <span>Download Report</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="system-status">
+          <div class="status-dot"></div>
+          <span>Scheduler Engine Ready</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <header class="topbar">
+        <div class="page-title">
+          <h1>
+            Disk Arm Scheduling Simulator
+            <span class="edu-tooltip">ℹ️
+              <span class="tooltip-text">Simulates disk head seek scheduling algorithms: FCFS, SSTF, SCAN, C-SCAN, LOOK, and C-LOOK.</span>
+            </span>
+          </h1>
+          <p>Animated visualizer of head movement, seek calculations, and side-by-side performance benchmarking.</p>
+        </div>
+
+        <div class="topbar-actions">
+          <button id="btnExportQueue" class="btn btn-secondary btn-sm" title="Export current request queue and results as JSON">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+            Export Results
+          </button>
+        </div>
+      </header>
+
+      <div class="page-body">
+        <!-- Tab Navigation (Simulation vs Performance Comparison) -->
+        <div class="page-tabs">
+          <div class="tab-link active" onclick="switchMainTab('simulation')">Interactive Simulation</div>
+          <div class="tab-link" onclick="switchMainTab('comparison')">Performance Comparison (All 6 Algorithms)</div>
+        </div>
+
+        <!-- SHARED CONTROLS PANEL -->
+        <div class="scheduler-controls-card">
+          <div class="controls-grid">
+            <div class="input-group">
+              <label class="input-label">Algorithm</label>
+              <select id="algoSelect" class="select">
+                <option value="fcfs">FCFS (First Come First Served)</option>
+                <option value="sstf" selected>SSTF (Shortest Seek Time First)</option>
+                <option value="scan">SCAN (Elevator Algorithm)</option>
+                <option value="c-scan">C-SCAN (Circular SCAN)</option>
+                <option value="look">LOOK Algorithm</option>
+                <option value="c-look">C-LOOK (Circular LOOK)</option>
+              </select>
+            </div>
+
+            <div class="input-group" style="grid-column: span 2;">
+              <label class="input-label">
+                Cylinder Request Queue (comma-separated)
+                <span class="edu-tooltip">ℹ️<span class="tooltip-text">Sequence of track/cylinder numbers requested by processes.</span></span>
+              </label>
+              <input type="text" id="queueInput" class="input" value="98, 183, 37, 122, 14, 124, 65, 67" placeholder="e.g. 98, 183, 37, 122, 14, 124, 65, 67">
+            </div>
+
+            <div class="input-group">
+              <label class="input-label">Initial Head Position</label>
+              <input type="number" id="headInput" class="input" value="53" min="0" max="199">
+            </div>
+
+            <div class="input-group">
+              <label class="input-label">Head Direction</label>
+              <select id="directionSelect" class="select">
+                <option value="up">Towards High Cylinders (Up)</option>
+                <option value="down">Towards Low Cylinders (Down)</option>
+              </select>
+            </div>
+
+            <div class="input-group">
+              <label class="input-label">Max Cylinder</label>
+              <input type="number" id="maxCylinderInput" class="input" value="199" min="10" max="999">
+            </div>
+          </div>
+
+          <div class="presets-bar">
+            <span class="presets-label">Textbook Presets:</span>
+            <select id="presetSelect" class="select" style="padding: 4px 10px; font-size: 12px; width: auto;">
+              <!-- Loaded dynamically -->
+            </select>
+            <button id="btnRandomQueue" class="btn btn-secondary btn-sm">🎲 Random Queue</button>
+            <button id="btnRunSchedule" class="btn btn-primary btn-sm" style="margin-left: auto;">Run Simulation</button>
+          </div>
+        </div>
+
+        <!-- ==========================================
+             TAB 1: INTERACTIVE SIMULATION
+             ========================================== -->
+        <div id="tabSimulationContent">
+          <!-- Canvas Visualizer Card -->
+          <div class="animation-card">
+            <!-- Playback Bar -->
+            <div class="playback-bar">
+              <div class="playback-controls">
+                <button id="btnPlayPause" class="btn btn-primary btn-sm">
+                  <span>▶ Play</span>
+                </button>
+                <button id="btnStepForward" class="btn btn-secondary btn-sm" title="Step forward one request">
+                  <span>⏭ Step</span>
+                </button>
+                <button id="btnResetAnim" class="btn btn-secondary btn-sm" title="Reset animation to start">
+                  <span>↺ Reset</span>
+                </button>
+                <span id="currentStepIndicator" style="font-size: 12px; color: var(--text-muted); font-weight: 600; margin-left: 8px;">
+                  Step 0
+                </span>
+              </div>
+
+              <div class="speed-control">
+                <span>Speed:</span>
+                <select id="speedSelect" class="select" style="padding: 4px 8px; font-size: 11px;">
+                  <option value="0.5">0.5x (Slow)</option>
+                  <option value="1" selected>1.0x (Normal)</option>
+                  <option value="2">2.0x (Fast)</option>
+                  <option value="4">4.0x (Very Fast)</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- HTML5 Animation Canvas -->
+            <div class="canvas-container">
+              <canvas id="diskCanvas"></canvas>
+            </div>
+
+            <!-- Results Banner -->
+            <div class="results-banner">
+              <div class="result-metric">
+                <div class="result-metric-label">Selected Algorithm</div>
+                <div id="metricAlgoName" class="result-metric-val" style="font-size: 18px;">SSTF</div>
+              </div>
+              <div class="result-metric">
+                <div class="result-metric-label">Total Head Movement</div>
+                <div id="metricTotalSeek" class="result-metric-val">0 Cylinders</div>
+              </div>
+              <div class="result-metric">
+                <div class="result-metric-label">Average Seek Time</div>
+                <div id="metricAvgSeek" class="result-metric-val">0 Cyl/Req</div>
+              </div>
+              <div class="result-metric">
+                <div class="result-metric-label">Time Complexity</div>
+                <div id="metricComplexity" class="result-metric-val" style="color: var(--secondary);">O(N²)</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step-by-Step Seek Trace Table & Theory -->
+          <div style="display: grid; grid-template-columns: 1fr 340px; gap: 24px;">
+            <!-- Trace Table -->
+            <div class="steps-card">
+              <div class="card-header">
+                <div class="card-title">Step-by-Step Seek Execution Trace</div>
+              </div>
+              <div class="steps-table-container">
+                <table class="steps-table">
+                  <thead>
+                    <tr>
+                      <th>Step</th>
+                      <th>From</th>
+                      <th>To</th>
+                      <th>Seek Distance</th>
+                      <th>Cumulative Seek</th>
+                      <th>Action / Notes</th>
+                    </tr>
+                  </thead>
+                  <tbody id="stepsTableBody">
+                    <!-- Populated via disk.js -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Algorithm Educational Overview -->
+            <div class="card" style="display: flex; flex-direction: column;">
+              <div class="card-header">
+                <div class="card-title">Algorithm Mechanics</div>
+              </div>
+              <p id="algoDescription" style="font-size: 13px; color: var(--text-muted); line-height: 1.5; margin-bottom: 14px;">
+                Description
+              </p>
+              <div style="margin-bottom: 12px;">
+                <strong style="font-size: 12px; color: var(--success); text-transform: uppercase;">Advantages</strong>
+                <ul id="algoPros" style="list-style: none; padding-left: 0; font-size: 12px; color: var(--text-muted); margin-top: 4px; line-height: 1.6;">
+                </ul>
+              </div>
+              <div>
+                <strong style="font-size: 12px; color: var(--danger); text-transform: uppercase;">Disadvantages</strong>
+                <ul id="algoCons" style="list-style: none; padding-left: 0; font-size: 12px; color: var(--text-muted); margin-top: 4px; line-height: 1.6;">
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ==========================================
+             TAB 2: PERFORMANCE COMPARISON (ALL 6)
+             ========================================== -->
+        <div id="tabComparisonContent" style="display: none;">
+          <!-- Action Bar -->
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+            <button id="btnRunComparison" class="btn btn-primary" style="font-size: 14px; padding: 10px 20px;">
+              ⚡ Run All 6 Algorithms on Current Queue
+            </button>
+            <div style="display: flex; gap: 10px;">
+              <button id="btnExportCompareCsv" class="btn btn-secondary btn-sm">Export CSV</button>
+              <button id="btnExportCompareJson" class="btn btn-secondary btn-sm">Export JSON</button>
+            </div>
+          </div>
+
+          <!-- Winner Trophy Banner -->
+          <div id="winnerBanner" class="comparison-winner-card" style="display: none;">
+            <div class="winner-info">
+              <h3>🏆 Optimal Algorithm: <span id="winnerAlgoName">-</span></h3>
+              <p id="winnerExplanation">Achieved minimum head movement across the request queue.</p>
+            </div>
+            <div style="text-align: right;">
+              <div style="font-size: 11px; text-transform: uppercase; color: var(--text-subtle);">Seek Distance</div>
+              <div id="winnerSeekDistance" style="font-size: 24px; font-weight: bold; color: #34d399;">-</div>
+            </div>
+          </div>
+
+          <!-- Chart.js Visualization Card -->
+          <div class="chart-card">
+            <div class="card-header">
+              <div class="card-title">Comparative Total Head Movement (Lower is Better)</div>
+            </div>
+            <div class="chart-wrapper">
+              <canvas id="comparisonChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Side-by-Side Summary Table -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Benchmark Summary Table</div>
+            </div>
+            <div style="overflow-x: auto;">
+              <table class="file-table">
+                <thead>
+                  <tr>
+                    <th>Algorithm</th>
+                    <th>Total Head Movement</th>
+                    <th>Avg Seek Time</th>
+                    <th>Total Steps</th>
+                    <th>Difference vs Best</th>
+                    <th>Seek Sequence Preview</th>
+                  </tr>
+                </thead>
+                <tbody id="comparisonTableBody">
+                  <tr>
+                    <td colspan="6" style="text-align: center; color: #64748b; padding: 24px;">
+                      Click "Run All 6 Algorithms on Current Queue" above to compare.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Tab Switcher Script -->
+  <script>
+    function switchMainTab(tab) {
+      document.querySelectorAll('.tab-link').forEach(link => link.classList.remove('active'));
+      const simTab = document.getElementById('tabSimulationContent');
+      const compTab = document.getElementById('tabComparisonContent');
+
+      if (tab === 'simulation') {
+        event.target.classList.add('active');
+        simTab.style.display = 'block';
+        compTab.style.display = 'none';
+        window.DiskApp?.draw();
+      } else {
+        event.target.classList.add('active');
+        simTab.style.display = 'none';
+        compTab.style.display = 'block';
+        window.ComparisonApp?.runComparison();
+      }
+    }
+  </script>
+
+  <!-- Scripts -->
+  <div id="toast-container"></div>
+  <script src="js/notifications.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/disk.js"></script>
+  <script src="js/comparison.js"></script>
+</body>
+</html>
