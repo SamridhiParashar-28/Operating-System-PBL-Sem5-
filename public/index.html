@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Virtual File System Simulator | OS PBL</title>
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/file-ops.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Persistent Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-icon">OS</div>
+        <div class="brand-text">
+          <h2>OS Simulator</h2>
+          <span>PBL Sem 5</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="nav-label">Core Modules</div>
+        <a href="index.html" class="nav-item active">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
+          <span>File Operations</span>
+        </a>
+        <a href="allocation.html" class="nav-item">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2 1.5 3 3.5 3h9c2 0 3.5-1 3.5-3V7c0-2-1.5-3-3.5-3h-9C5.5 4 4 5 4 7z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6"></path></svg>
+          <span>Disk Allocation</span>
+        </a>
+        <a href="disk-scheduling.html" class="nav-item">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+          <span>Disk Scheduling</span>
+        </a>
+
+        <div class="nav-label" style="margin-top: 14px;">Reports & Data</div>
+        <a href="/api/report/download" target="_blank" class="nav-item">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+          <span>Download Report</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="system-status">
+          <div class="status-dot"></div>
+          <span>VFS Engine Online</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Topbar Header -->
+      <header class="topbar">
+        <div class="page-title">
+          <h1>
+            Virtual File System (VFS) Operations
+            <span class="edu-tooltip">ℹ️
+              <span class="tooltip-text">Simulates POSIX-compliant inodes, directory hierarchy, permissions (rwx), file descriptors, and system calls in memory.</span>
+            </span>
+          </h1>
+          <p>Create, read, write, append, rename, move, and inspect inodes with real-time system call tracing.</p>
+        </div>
+
+        <div class="topbar-actions">
+          <button id="btnExportFs" class="btn btn-secondary btn-sm" title="Export File System State to JSON">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+            Export JSON
+          </button>
+          <label class="btn btn-secondary btn-sm" style="cursor: pointer;" title="Import previously exported JSON state">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+            Import JSON
+            <input type="file" id="importFileInput" accept=".json" style="display: none;">
+          </label>
+          <button id="btnResetFs" class="btn btn-danger btn-sm" title="Reset to default starter files">Reset VFS</button>
+        </div>
+      </header>
+
+      <!-- Page Body -->
+      <div class="page-body">
+        <!-- Active Open File Table Banner -->
+        <section class="open-fd-section">
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <strong style="font-size: 13px;">Active Open File Table (OFTable)</strong>
+              <span class="badge badge-primary"><span id="openFdCount">0</span> open descriptors</span>
+              <span class="edu-tooltip">ℹ️
+                <span class="tooltip-text">In an OS, when a process calls open(), a File Descriptor (FD) is assigned pointing to an entry in the system-wide Open File Table tracking cursor offsets.</span>
+              </span>
+            </div>
+            <span style="font-size: 11px; color: var(--text-subtle);">Simulates POSIX open(), close(), read(), write()</span>
+          </div>
+          <div id="openFdTags" class="fd-tags">
+            <!-- Dynamically populated chips -->
+          </div>
+        </section>
+
+        <!-- 3-Column Explorer Layout -->
+        <div class="file-ops-layout">
+          <!-- 1. Left: Tree Directory View -->
+          <div class="tree-panel">
+            <div class="tree-panel-header">
+              <span>Directory Tree</span>
+              <span class="edu-tooltip">ℹ️
+                <span class="tooltip-text">Hierarchical directory representation starting from root (/). Click folders to expand/collapse and navigate.</span>
+              </span>
+            </div>
+            <div id="treeContainer" class="tree-container">
+              <!-- Rendered via file-ops.js -->
+            </div>
+          </div>
+
+          <!-- 2. Middle: File Explorer Table -->
+          <div class="explorer-panel">
+            <div class="explorer-toolbar">
+              <div id="breadcrumbContainer" class="breadcrumb">
+                <!-- Breadcrumbs -->
+              </div>
+              <div class="explorer-actions">
+                <button id="btnNewFile" class="btn btn-primary btn-sm">+ New File</button>
+                <button id="btnNewFolder" class="btn btn-secondary btn-sm">+ New Folder</button>
+              </div>
+            </div>
+
+            <div class="file-table-container">
+              <table class="file-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Type</th>
+                    <th>Size</th>
+                    <th>Permissions</th>
+                    <th>Inode</th>
+                    <th>Modified</th>
+                    <th style="text-align: right;">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="fileTableBody">
+                  <!-- File rows -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- 3. Right: Inode Metadata & Editor -->
+          <div class="inspector-panel">
+            <div class="inspector-header">
+              <span>Inode Metadata & Content</span>
+              <span id="metaType" class="badge badge-primary">FILE</span>
+            </div>
+
+            <div class="meta-grid">
+              <div class="meta-item">
+                <div class="meta-label">Name</div>
+                <div id="metaName" class="meta-val">-</div>
+              </div>
+              <div class="meta-item">
+                <div class="meta-label">Inode ID</div>
+                <div id="metaInode" class="meta-val">#0</div>
+              </div>
+              <div class="meta-item" style="grid-column: span 2;">
+                <div class="meta-label">Full Path</div>
+                <div id="metaPath" class="meta-val">/</div>
+              </div>
+              <div class="meta-item">
+                <div class="meta-label">Size</div>
+                <div id="metaSize" class="meta-val">0 B</div>
+              </div>
+              <div class="meta-item">
+                <div class="meta-label">Owner</div>
+                <div id="metaOwner" class="meta-val">root</div>
+              </div>
+              <div class="meta-item">
+                <div class="meta-label">Permissions</div>
+                <div id="metaPerm" class="meta-val">-rwxr-xr-x</div>
+              </div>
+              <div class="meta-item">
+                <div class="meta-label">Last Modified</div>
+                <div id="metaModified" class="meta-val">-</div>
+              </div>
+            </div>
+
+            <div id="contentPreviewContainer" class="content-preview-box">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span class="meta-label">File Content Editor</span>
+                <div style="display: flex; gap: 6px;">
+                  <button id="btnAppendContent" class="btn btn-secondary btn-sm" title="Append text at EOF">Append</button>
+                  <button id="btnSaveContent" class="btn btn-primary btn-sm" title="Save changes directly">Save</button>
+                </div>
+              </div>
+              <textarea id="fileContentEditor" class="content-preview-textarea" placeholder="Select a file to inspect and edit its content..."></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- System Call Audit Terminal Console -->
+        <div class="terminal-card">
+          <div class="terminal-header">
+            <div class="terminal-title">
+              <div class="terminal-dots">
+                <span class="terminal-dot dot-red"></span>
+                <span class="terminal-dot dot-yellow"></span>
+                <span class="terminal-dot dot-green"></span>
+              </div>
+              <span>OS Kernel System Call Audit Log (real-time stream)</span>
+            </div>
+            <button id="btnClearTerminal" class="btn btn-secondary btn-sm" style="padding: 2px 8px; font-size: 11px;">Clear Log View</button>
+          </div>
+          <div id="terminalBody" class="terminal-body">
+            <!-- Dynamically populated logs -->
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- MODALS -->
+
+  <!-- Modal: New File -->
+  <div id="modalNewFile" class="modal-overlay">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3>Create New File (sys_creat)</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <form id="formNewFile">
+        <div class="modal-body">
+          <div class="input-group">
+            <label class="input-label">Directory Location</label>
+            <span id="newFilePathPrefix" style="font-family: monospace; color: var(--primary);">/</span>
+          </div>
+          <div class="input-group">
+            <label class="input-label">File Name</label>
+            <input type="text" id="newFileName" class="input" placeholder="e.g. document.txt" required>
+          </div>
+          <div class="input-group">
+            <label class="input-label">Initial Permissions (Octal)</label>
+            <input type="text" id="newFilePerm" class="input" value="644" placeholder="644">
+          </div>
+          <div class="input-group">
+            <label class="input-label">Initial Text Content</label>
+            <textarea id="newFileContent" class="textarea" rows="4" placeholder="Enter optional initial text..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-modal-cancel">Cancel</button>
+          <button type="submit" class="btn btn-primary">Create File</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: New Folder -->
+  <div id="modalNewFolder" class="modal-overlay">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3>Create New Directory (sys_mkdir)</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <form id="formNewFolder">
+        <div class="modal-body">
+          <div class="input-group">
+            <label class="input-label">Parent Directory</label>
+            <span id="newFolderPathPrefix" style="font-family: monospace; color: var(--primary);">/</span>
+          </div>
+          <div class="input-group">
+            <label class="input-label">Directory Name</label>
+            <input type="text" id="newFolderName" class="input" placeholder="e.g. projects" required>
+          </div>
+          <div class="input-group">
+            <label class="input-label">Directory Permissions (Octal)</label>
+            <input type="text" id="newFolderPerm" class="input" value="755" placeholder="755">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-modal-cancel">Cancel</button>
+          <button type="submit" class="btn btn-primary">Create Folder</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Rename -->
+  <div id="modalRename" class="modal-overlay">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3>Rename Item (sys_rename)</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <form id="formRename">
+        <div class="modal-body">
+          <input type="hidden" id="renameTargetPath">
+          <div class="input-group">
+            <label class="input-label">New Name</label>
+            <input type="text" id="renameNewName" class="input" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-modal-cancel">Cancel</button>
+          <button type="submit" class="btn btn-primary">Rename</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Move -->
+  <div id="modalMove" class="modal-overlay">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3>Move Item (sys_move / mv)</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <form id="formMove">
+        <div class="modal-body">
+          <input type="hidden" id="moveSrcPath">
+          <div class="input-group">
+            <label class="input-label">Target Destination Directory</label>
+            <input type="text" id="moveDestDir" class="input" placeholder="/home/user" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-modal-cancel">Cancel</button>
+          <button type="submit" class="btn btn-primary">Move</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Copy -->
+  <div id="modalCopy" class="modal-overlay">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3>Copy Item (sys_copy / cp)</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <form id="formCopy">
+        <div class="modal-body">
+          <input type="hidden" id="copySrcPath">
+          <div class="input-group">
+            <label class="input-label">Target Destination Directory</label>
+            <input type="text" id="copyDestDir" class="input" placeholder="/home/user" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-modal-cancel">Cancel</button>
+          <button type="submit" class="btn btn-primary">Copy</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Chmod -->
+  <div id="modalChmod" class="modal-overlay">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3>Change Permissions (sys_chmod)</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <form id="formChmod">
+        <div class="modal-body">
+          <input type="hidden" id="chmodTargetPath">
+          <input type="hidden" id="chmodModeVal" value="755">
+          <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
+            Configure Read (r=4), Write (w=2), and Execute (x=1) permissions for User, Group, and Others:
+          </p>
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px;">
+            <div style="background: var(--bg-input); padding: 10px; border-radius: var(--radius-sm);">
+              <strong>User (Owner)</strong>
+              <div style="margin-top: 6px;"><label><input type="checkbox" id="cbUr" class="chmod-cb"> Read (r)</label></div>
+              <div><label><input type="checkbox" id="cbUw" class="chmod-cb"> Write (w)</label></div>
+              <div><label><input type="checkbox" id="cbUx" class="chmod-cb"> Exec (x)</label></div>
+            </div>
+            <div style="background: var(--bg-input); padding: 10px; border-radius: var(--radius-sm);">
+              <strong>Group</strong>
+              <div style="margin-top: 6px;"><label><input type="checkbox" id="cbGr" class="chmod-cb"> Read (r)</label></div>
+              <div><label><input type="checkbox" id="cbGw" class="chmod-cb"> Write (w)</label></div>
+              <div><label><input type="checkbox" id="cbGx" class="chmod-cb"> Exec (x)</label></div>
+            </div>
+            <div style="background: var(--bg-input); padding: 10px; border-radius: var(--radius-sm);">
+              <strong>Others</strong>
+              <div style="margin-top: 6px;"><label><input type="checkbox" id="cbOr" class="chmod-cb"> Read (r)</label></div>
+              <div><label><input type="checkbox" id="cbOw" class="chmod-cb"> Write (w)</label></div>
+              <div><label><input type="checkbox" id="cbOx" class="chmod-cb"> Exec (x)</label></div>
+            </div>
+          </div>
+          <div style="text-align: center; font-size: 15px;">
+            Octal Mode: <strong id="chmodOctalDisplay" style="color: var(--primary);">0o755</strong>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-modal-cancel">Cancel</button>
+          <button type="submit" class="btn btn-primary">Apply Permissions</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Open File -->
+  <div id="modalOpen" class="modal-overlay">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3>Open File (sys_open)</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <form id="formOpen">
+        <div class="modal-body">
+          <input type="hidden" id="openFilePath">
+          <div class="input-group">
+            <label class="input-label">Access Mode</label>
+            <select id="openMode" class="select">
+              <option value="r">Read Only ('r')</option>
+              <option value="w">Write / Truncate ('w')</option>
+              <option value="a">Append ('a')</option>
+            </select>
+          </div>
+          <p style="font-size: 12px; color: var(--text-muted);">
+            Opening allocates a numeric File Descriptor (FD) and adds an entry into the Active Open File Table.
+          </p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-modal-cancel">Cancel</button>
+          <button type="submit" class="btn btn-primary">Allocate FD & Open</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: File Descriptor I/O -->
+  <div id="modalFdIo" class="modal-overlay">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3 id="ioFileTitle">File Descriptor I/O</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <form id="formFdIo">
+        <div class="modal-body">
+          <input type="hidden" id="ioFd">
+          <div class="input-group">
+            <label class="input-label">Read Bytes Count (sys_read)</label>
+            <input type="number" id="ioReadLength" class="input" placeholder="e.g. 50 (leave empty to read all)">
+          </div>
+          <div class="input-group">
+            <label class="input-label">Read Output</label>
+            <pre id="ioReadOutput" style="background:#090d16; padding:10px; border-radius:4px; font-size:12px; max-height:100px; overflow-y:auto; border:1px solid var(--border-color);"></pre>
+          </div>
+          <div class="input-group" style="margin-top: 14px;">
+            <label class="input-label">Write String Data (sys_write)</label>
+            <textarea id="ioWriteData" class="textarea" rows="2" placeholder="Text to write through file descriptor..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-modal-cancel">Done</button>
+          <button type="submit" class="btn btn-primary">Execute I/O</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <div id="toast-container"></div>
+  <script src="js/notifications.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/file-ops.js"></script>
+</body>
+</html>

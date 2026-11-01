@@ -1,0 +1,30 @@
+{
+  "name": "mini-filesystem-disk-scheduler",
+  "version": "1.0.0",
+  "description": "Educational Mini File System and Disk Scheduling Simulator for Operating Systems PBL",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "keywords": [
+    "operating-systems",
+    "file-system",
+    "disk-scheduling",
+    "fcfs",
+    "sstf",
+    "scan",
+    "c-scan",
+    "look",
+    "c-look",
+    "contiguous-allocation",
+    "linked-allocation",
+    "indexed-allocation",
+    "simulator"
+  ],
+  "author": "OS Project Team",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
