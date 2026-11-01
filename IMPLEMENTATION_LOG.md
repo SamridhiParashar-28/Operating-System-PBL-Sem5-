@@ -137,9 +137,21 @@ Operating-System-PBL-Sem5-/
 
 ---
 
+
+---
+
 ## 4. Key Verification Metrics
 - **Node.js Environment:** Verified running on `v24.13.1` with Express `v4.19.2`.
 - **POSIX System Calls Tested:** `mkdir`, `creat`, `open`, `close`, `read`, `write`, `append`, `unlink`, `rename`, `move`, `copy`, `chmod`.
 - **Allocation Policies Tested:** Contiguous (First-Fit, Best-Fit, Worst-Fit), Linked List with pointers, Indexed with dedicated Index Block.
 - **Disk Scheduling Algorithms Tested:** FCFS, SSTF, SCAN, C-SCAN, LOOK, C-LOOK.
 - **Data Persistence & Portability:** JSON state export and import supported on all modules.
+
+---
+
+## 5. Session 5: GitHub Deployment & Dual-Mode Hosting Engine
+- **GitHub Repository Sync:** Verified Git remote `origin` pointing to `https://github.com/SamridhiParashar-28/Operating-System-PBL-Sem5-.git`.
+- **Created `.gitignore`:** Added exclusions for `node_modules/`, `package-lock.json`, and debug logs.
+- **Created GitHub Actions Workflow (`.github/workflows/deploy-pages.yml`):** Automated deployment workflow targeting GitHub Pages using `actions/deploy-pages@v4` pointing to the `./public` artifact directory.
+- **Dual-Mode Client Engine (`public/js/api.js`):** Engineered a transparent fallback layer containing client-side simulation engines (`ClientFS`, `ClientAllocator`, `ClientScheduler`). When deployed statically to GitHub Pages, the simulator executes 100% in-browser without requiring an active cloud backend.
+

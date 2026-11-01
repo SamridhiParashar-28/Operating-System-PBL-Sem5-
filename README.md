@@ -7,7 +7,12 @@ This application provides an interactive, visual environment to understand and a
 2. **Disk Space Allocation Methods:** Contiguous Allocation (with First-Fit, Best-Fit, and Worst-Fit placement policies plus Disk Compaction), Linked Allocation, and Indexed Allocation with live fragmentation tracking.
 3. **Disk Arm Scheduling Algorithms:** Visual, animated simulation of **FCFS, SSTF, SCAN, C-SCAN, LOOK, and C-LOOK**, with a side-by-side comparative benchmarking dashboard.
 
+
+> **🌐 Live Demo (GitHub Pages):** [https://samridhiparashar-28.github.io/Operating-System-PBL-Sem5-/](https://samridhiparashar-28.github.io/Operating-System-PBL-Sem5-/)  
+> *(Runs seamlessly in-browser via client simulation engine or locally with Node.js Express backend)*
+
 ---
+
 
 ## 📸 Screenshots
 
